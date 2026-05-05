@@ -1,4 +1,4 @@
-package com.example.codetogether.dto;
+package com.example.codetogether.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

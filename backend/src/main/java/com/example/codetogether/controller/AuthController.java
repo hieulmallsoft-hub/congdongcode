@@ -1,10 +1,13 @@
 package com.example.codetogether.controller;
 
-import com.example.codetogether.dto.AuthResponse;
-import com.example.codetogether.dto.LoginRequest;
-import com.example.codetogether.dto.RegisterRequest;
+import com.example.codetogether.dto.request.LoginRequest;
+import com.example.codetogether.dto.request.RegisterRequest;
+import com.example.codetogether.dto.response.AuthResponse;
+import com.example.codetogether.helper.ApiResponse;
 import com.example.codetogether.service.AuthService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,12 +23,13 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(HttpStatus.CREATED.value(), "Tao tai khoan thanh cong", authService.register(request)));
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Dang nhap thanh cong", authService.login(request)));
     }
 }

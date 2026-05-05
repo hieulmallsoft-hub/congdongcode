@@ -1,5 +1,4 @@
 package com.example.codetogether.entity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -30,6 +29,9 @@ public class CommunityPost {
 
     @Column(columnDefinition = "text")
     private String codeSnippet;
+
+    @Column(columnDefinition = "text")
+    private String imageUrl;
 
     @Column(nullable = false, length = 40)
     private String language;
@@ -95,6 +97,14 @@ public class CommunityPost {
         this.codeSnippet = codeSnippet;
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     public String getLanguage() {
         return language;
     }
@@ -137,5 +147,9 @@ public class CommunityPost {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }

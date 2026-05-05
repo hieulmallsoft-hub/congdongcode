@@ -1,4 +1,4 @@
-package com.example.codetogether.dto;
+package com.example.codetogether.dto.response;
 
 import com.example.codetogether.entity.PostCategory;
 import com.example.codetogether.entity.PostStatus;
@@ -10,10 +10,12 @@ public record CommunityPostResponse(
         String title,
         String body,
         String codeSnippet,
+        String imageUrl,
         String language,
         String tags,
         PostCategory category,
         PostStatus status,
+        Long authorId,
         String authorName,
         LocalDateTime createdAt,
         long answerCount,

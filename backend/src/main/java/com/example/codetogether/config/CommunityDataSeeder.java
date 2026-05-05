@@ -4,9 +4,7 @@ import com.example.codetogether.entity.DailyChallenge;
 import com.example.codetogether.repository.DailyChallengeRepository;
 import java.time.LocalDate;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
 
-@Component
 public class CommunityDataSeeder implements CommandLineRunner {
     private final DailyChallengeRepository challengeRepository;
 

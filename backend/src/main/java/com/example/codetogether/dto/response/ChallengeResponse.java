@@ -1,4 +1,4 @@
-package com.example.codetogether.dto;
+package com.example.codetogether.dto.response;
 
 import java.time.LocalDate;
 import java.util.List;

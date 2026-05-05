@@ -1,12 +1,13 @@
 package com.example.codetogether.service;
 
-import com.example.codetogether.dto.AnswerRequest;
-import com.example.codetogether.dto.AnswerResponse;
-import com.example.codetogether.dto.ChallengeResponse;
-import com.example.codetogether.dto.CommunityPostRequest;
-import com.example.codetogether.dto.CommunityPostResponse;
-import com.example.codetogether.dto.SubmissionRequest;
-import com.example.codetogether.dto.SubmissionResponse;
+import com.example.codetogether.dto.request.AnswerRequest;
+import com.example.codetogether.dto.request.CommunityPostRequest;
+import com.example.codetogether.dto.request.DailyChallengeRequest;
+import com.example.codetogether.dto.request.SubmissionRequest;
+import com.example.codetogether.dto.response.AnswerResponse;
+import com.example.codetogether.dto.response.ChallengeResponse;
+import com.example.codetogether.dto.response.CommunityPostResponse;
+import com.example.codetogether.dto.response.SubmissionResponse;
 import com.example.codetogether.entity.ChallengeSubmission;
 import com.example.codetogether.entity.CommunityPost;
 import com.example.codetogether.entity.DailyChallenge;
@@ -58,21 +59,36 @@ public class CommunityService {
     public CommunityPostResponse createPost(Long userId, CommunityPostRequest request) {
         User user = getUser(userId);
         CommunityPost post = new CommunityPost();
-        post.setTitle(request.title());
-        post.setBody(request.body());
-        post.setCodeSnippet(blankToNull(request.codeSnippet()));
-        post.setLanguage(request.language());
-        post.setTags(blankToNull(request.tags()));
-        post.setCategory(request.category());
+        applyPostRequest(post, request);
         post.setAuthor(user);
         return toPostResponse(postRepository.save(post), false);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityPostResponse getPostDetail(Long postId) {
+        return toPostResponse(getPost(postId), true);
+    }
+
+    @Transactional
+    public CommunityPostResponse updatePost(Long userId, boolean isAdmin, Long postId, CommunityPostRequest request) {
+        CommunityPost post = getPost(postId);
+        assertPostOwnerOrAdmin(post, userId, isAdmin);
+        applyPostRequest(post, request);
+        return toPostResponse(postRepository.save(post), true);
+    }
+
+    @Transactional
+    public void deletePost(Long userId, boolean isAdmin, Long postId) {
+        CommunityPost post = getPost(postId);
+        assertPostOwnerOrAdmin(post, userId, isAdmin);
+        answerRepository.deleteByPostId(postId);
+        postRepository.delete(post);
     }
 
     @Transactional
     public AnswerResponse addAnswer(Long userId, Long postId, AnswerRequest request) {
         User user = getUser(userId);
-        CommunityPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Post not found"));
+        CommunityPost post = getPost(postId);
 
         PostAnswer answer = new PostAnswer();
         answer.setPost(post);
@@ -84,10 +100,18 @@ public class CommunityService {
 
     @Transactional(readOnly = true)
     public ChallengeResponse getDailyChallenge() {
-        DailyChallenge challenge = challengeRepository
-                .findFirstByPublishDateLessThanEqualOrderByPublishDateDesc(LocalDate.now())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No daily challenge yet"));
+        LocalDate today = LocalDate.now();
+        DailyChallenge challenge = challengeRepository.findByPublishDate(today)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Chua co daily challenge hom nay"));
         return toChallengeResponse(challenge);
+    }
+
+    @Transactional
+    public ChallengeResponse upsertDailyChallenge(DailyChallengeRequest request) {
+        DailyChallenge challenge = challengeRepository.findByPublishDate(request.publishDate())
+                .orElseGet(DailyChallenge::new);
+        applyChallengeRequest(challenge, request);
+        return toChallengeResponse(challengeRepository.save(challenge));
     }
 
     @Transactional(readOnly = true)
@@ -122,10 +146,12 @@ public class CommunityService {
                 post.getTitle(),
                 post.getBody(),
                 post.getCodeSnippet(),
+                post.getImageUrl(),
                 post.getLanguage(),
                 post.getTags(),
                 post.getCategory(),
                 post.getStatus(),
+                post.getAuthor().getId(),
                 post.getAuthor().getFullName(),
                 post.getCreatedAt(),
                 answerRepository.countByPostId(post.getId()),
@@ -144,6 +170,10 @@ public class CommunityService {
     }
 
     private ChallengeResponse toChallengeResponse(DailyChallenge challenge) {
+        return toChallengeResponse(challenge, challenge.getPublishDate());
+    }
+
+    private ChallengeResponse toChallengeResponse(DailyChallenge challenge, LocalDate displayDate) {
         List<SubmissionResponse> submissions = submissionRepository
                 .findTop8ByChallengeIdOrderByCreatedAtDesc(challenge.getId()).stream()
                 .map(this::toSubmissionResponse)
@@ -157,7 +187,7 @@ public class CommunityService {
                 challenge.getStarterCode(),
                 challenge.getExpectedOutput(),
                 challenge.getSolutionHint(),
-                challenge.getPublishDate(),
+                displayDate,
                 submissionRepository.countByChallengeId(challenge.getId()),
                 submissions
         );
@@ -178,6 +208,40 @@ public class CommunityService {
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
     }
 
+    private CommunityPost getPost(Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Post not found"));
+    }
+
+    private void applyPostRequest(CommunityPost post, CommunityPostRequest request) {
+        post.setTitle(request.title());
+        post.setBody(request.body());
+        post.setCodeSnippet(blankToNull(request.codeSnippet()));
+        post.setImageUrl(blankToNull(request.imageUrl()));
+        post.setLanguage(request.language());
+        post.setTags(blankToNull(request.tags()));
+        post.setCategory(request.category());
+    }
+
+    private void assertPostOwnerOrAdmin(CommunityPost post, Long userId, boolean isAdmin) {
+        if (isAdmin) {
+            return;
+        }
+        if (post.getAuthor() == null || post.getAuthor().getId() == null || !post.getAuthor().getId().equals(userId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Khong co quyen sua hoac xoa bai dang nay");
+        }
+    }
+
+    private void applyChallengeRequest(DailyChallenge challenge, DailyChallengeRequest request) {
+        challenge.setTitle(request.title());
+        challenge.setPrompt(request.prompt());
+        challenge.setDifficulty(request.difficulty());
+        challenge.setLanguage(request.language());
+        challenge.setStarterCode(request.starterCode());
+        challenge.setExpectedOutput(request.expectedOutput());
+        challenge.setSolutionHint(blankToNull(request.solutionHint()));
+        challenge.setPublishDate(request.publishDate());
+    }
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
     }

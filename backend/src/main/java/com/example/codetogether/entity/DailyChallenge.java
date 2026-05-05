@@ -116,4 +116,5 @@ public class DailyChallenge {
     public void setPublishDate(LocalDate publishDate) {
         this.publishDate = publishDate;
     }
+
 }

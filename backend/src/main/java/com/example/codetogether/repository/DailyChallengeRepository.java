@@ -9,5 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface DailyChallengeRepository extends JpaRepository<DailyChallenge, Long> {
     Optional<DailyChallenge> findFirstByPublishDateLessThanEqualOrderByPublishDateDesc(LocalDate publishDate);
 
+    Optional<DailyChallenge> findByPublishDate(LocalDate publishDate);
+
     List<DailyChallenge> findAllByOrderByPublishDateDesc();
 }

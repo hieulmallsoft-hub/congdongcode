@@ -8,4 +8,6 @@ public interface PostAnswerRepository extends JpaRepository<PostAnswer, Long> {
     List<PostAnswer> findByPostIdOrderByCreatedAtAsc(Long postId);
 
     long countByPostId(Long postId);
+
+    void deleteByPostId(Long postId);
 }
