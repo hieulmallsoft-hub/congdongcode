@@ -15,13 +15,14 @@ import {
   Send,
   Sparkles,
   Tag,
+  Trophy,
   Trash2,
   Users,
   X,
 } from 'lucide-react';
 import './styles.css';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const emptyPost = {
   title: '',
@@ -63,6 +64,7 @@ function App() {
   const [submission, setSubmission] = useState({ answerCode: '', notes: '' });
   const [challengeForm, setChallengeForm] = useState(emptyChallenge);
   const [dailyChallenge, setDailyChallenge] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [posts, setPosts] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
@@ -189,9 +191,10 @@ function App() {
   async function loadCommunity() {
     setLoading(true);
     try {
-      const [challengeResult, feedResult] = await Promise.allSettled([
+      const [challengeResult, feedResult, leaderboardResult] = await Promise.allSettled([
         request('/community/challenges/daily'),
         request('/community/feed'),
+        request('/community/leaderboard'),
       ]);
       if (challengeResult.status === 'fulfilled') {
         setDailyChallenge(challengeResult.value);
@@ -205,6 +208,9 @@ function App() {
         setPosts(feedResult.value);
       } else {
         setMessage(feedResult.reason.message);
+      }
+      if (leaderboardResult.status === 'fulfilled') {
+        setLeaderboard(leaderboardResult.value);
       }
     } catch (error) {
       setMessage(error.message);
@@ -407,6 +413,22 @@ function App() {
       setSubmission({ answerCode: '', notes: '' });
       await loadCommunity();
       return 'Da nop loi giai bai tap hom nay';
+    });
+  }
+
+  async function reviewSubmission(submissionId) {
+    const correct = window.confirm('Bai nay dung yeu cau? Bam OK neu dung, Cancel neu sai.');
+    const qualityInput = window.prompt('Diem chat luong code (0-20)', correct ? '10' : '0');
+    if (qualityInput === null) return;
+    const qualityScore = Math.max(0, Math.min(20, Number(qualityInput) || 0));
+    const reviewNote = window.prompt('Ghi chu review', correct ? 'Bai dung, da cham diem chat luong.' : 'Bai chua dung yeu cau.') || '';
+    await action(async () => {
+      await request(`/community/submissions/${submissionId}/score`, {
+        method: 'PUT',
+        body: JSON.stringify({ correct, qualityScore, reviewNote }),
+      });
+      await loadCommunity();
+      return 'Da cap nhat diem bai nop';
     });
   }
 
@@ -923,9 +945,57 @@ function App() {
                       Nop loi giai
                     </button>
                   </form>
+                  {dailyChallenge.recentSubmissions?.length > 0 && (
+                    <div className="submission-list">
+                      <h4>Bai nop moi</h4>
+                      {dailyChallenge.recentSubmissions.map((item) => (
+                        <div className="submission-item" key={item.id}>
+                          <div>
+                            <strong>{item.authorName}</strong>
+                            <span>{formatDateTime(item.createdAt)}</span>
+                          </div>
+                          <div className="score-chips">
+                            <span className={item.correct ? 'score-chip ok' : 'score-chip bad'}>
+                              {item.correct ? 'Dung' : 'Sai'}
+                            </span>
+                            <span className="score-chip">{item.finalScore || 0} diem</span>
+                            {item.speedRank > 0 && <span className="score-chip">#{item.speedRank}</span>}
+                          </div>
+                          {isAdmin && (
+                            <button type="button" className="ghost-button small-button" onClick={() => reviewSubmission(item.id)} disabled={loading}>
+                              Cham diem
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               ) : (
                 <p className="empty">Chua co bai tap nao.</p>
+              )}
+            </article>
+
+            <article className="panel leaderboard-panel">
+              <div className="panel-heading">
+                <h2><Trophy size={19} /> Bang xep hang</h2>
+                <span className="pill">Top {leaderboard.length}</span>
+              </div>
+              {leaderboard.length ? (
+                <div className="leaderboard-list">
+                  {leaderboard.slice(0, 8).map((entry, index) => (
+                    <div className="leaderboard-row" key={entry.userId}>
+                      <span className="rank-number">{index + 1}</span>
+                      <div>
+                        <strong>{entry.fullName}</strong>
+                        <small>{entry.solvedCount} bai dung · streak {entry.streakDays} ngay</small>
+                      </div>
+                      <strong>{entry.totalScore}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty">Chua co diem xep hang.</p>
               )}
             </article>
 

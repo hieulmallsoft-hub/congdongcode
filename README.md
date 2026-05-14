@@ -37,6 +37,25 @@ mvn spring-boot:run
 
 Backend chay tai `http://localhost:8080`.
 
+## Cau hinh production
+
+Khi deploy that, chay backend voi profile `prod` va truyen cac bien moi truong bat buoc:
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+DB_URL=jdbc:postgresql://<host>:5432/codetogether
+DB_USERNAME=<user>
+DB_PASSWORD=<strong-password>
+JWT_SECRET=<random-secret-at-least-32-chars>
+CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
+```
+
+Profile `prod` se fail-fast neu dung JWT secret mac dinh, DB password local, CORS localhost, hoac cau hinh Hibernate tu dong sua schema. Khi build frontend production, dat API URL bang:
+
+```bash
+VITE_API_URL=https://your-api-domain.com/api
+```
+
 Neu muon chay nhanh bang H2 in-memory:
 
 ```bash

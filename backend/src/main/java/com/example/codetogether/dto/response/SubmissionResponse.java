@@ -7,6 +7,14 @@ public record SubmissionResponse(
         String answerCode,
         String notes,
         String authorName,
+        Boolean correct,
+        Integer qualityScore,
+        Integer explanationScore,
+        Integer speedRank,
+        Integer speedBonus,
+        Integer streakBonus,
+        Integer finalScore,
+        String reviewNote,
         LocalDateTime createdAt
 ) {
 }

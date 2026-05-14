@@ -3,10 +3,12 @@ package com.example.codetogether.controller;
 import com.example.codetogether.dto.request.AnswerRequest;
 import com.example.codetogether.dto.request.CommunityPostRequest;
 import com.example.codetogether.dto.request.DailyChallengeRequest;
+import com.example.codetogether.dto.request.ScoreReviewRequest;
 import com.example.codetogether.dto.request.SubmissionRequest;
 import com.example.codetogether.dto.response.AnswerResponse;
 import com.example.codetogether.dto.response.ChallengeResponse;
 import com.example.codetogether.dto.response.CommunityPostResponse;
+import com.example.codetogether.dto.response.LeaderboardEntryResponse;
 import com.example.codetogether.dto.response.SubmissionResponse;
 import com.example.codetogether.helper.ApiResponse;
 import com.example.codetogether.security.CustomUserDetails;
@@ -94,6 +96,14 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.success("Lay danh sach challenge thanh cong", communityService.getChallenges()));
     }
 
+    @GetMapping("/leaderboard")
+    public ResponseEntity<ApiResponse<List<LeaderboardEntryResponse>>> getLeaderboard(
+            @RequestParam(defaultValue = "all") String scope,
+            @RequestParam(required = false) Long challengeId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("Lay bang xep hang thanh cong", communityService.getLeaderboard(scope, challengeId)));
+    }
+
     @PostMapping("/challenges")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ChallengeResponse>> upsertDailyChallenge(
@@ -110,6 +120,15 @@ public class CommunityController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "Nop bai thanh cong", communityService.submitChallenge(userDetails.getId(), challengeId, request)));
+    }
+
+    @PutMapping("/submissions/{submissionId}/score")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<SubmissionResponse>> reviewSubmission(
+            @PathVariable Long submissionId,
+            @Valid @RequestBody ScoreReviewRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("Cap nhat diem bai nop thanh cong", communityService.reviewSubmission(submissionId, request)));
     }
 
     @GetMapping("/posts/{postId}")
